@@ -228,10 +228,8 @@
                 <input type="text" id="searchInput" placeholder="Search projects...">
                 <select id="statusFilter">
                     <option value="">All Statuses</option>
-                    <option value="pågående">Pågående</option>
-                    <option value="ongoing">Ongoing</option>
-                    <option value="avsluttet">Avsluttet</option>
-                    <option value="ended">Ended</option>
+                    <option value="ongoing">Ongoing (Pågående)</option>
+                    <option value="completed">Completed (Avsluttet)</option>
                 </select>
                 <select id="groupFilter">
                     <option value="">All Research Groups</option>
@@ -590,7 +588,17 @@
 
             const filtered = projectsData.filter(project => {
                 const matchesSearch = project['Project Name'].toLowerCase().includes(searchTerm);
-                const matchesStatus = !statusFilter || project.Status === statusFilter;
+
+                // Status filter - handle semantic matching
+                let matchesStatus = true;
+                if (statusFilter) {
+                    if (statusFilter === 'ongoing') {
+                        matchesStatus = project.Status === 'pågående' || project.Status === 'ongoing';
+                    } else if (statusFilter === 'completed') {
+                        matchesStatus = project.Status === 'avsluttet' || project.Status === 'ended';
+                    }
+                }
+
                 const matchesGroup = !groupFilter ||
                     (project['Research Group (EN)'] && project['Research Group (EN)'].includes(groupFilter));
 
