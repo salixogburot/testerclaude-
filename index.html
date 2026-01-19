@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CICERO Projects Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #2d3748;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #718096;
+            font-size: 1.1rem;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .metric-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .metric-label {
+            color: #718096;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .chart-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .chart-title {
+            font-size: 1.3rem;
+            color: #2d3748;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        .table-container {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow-x: auto;
+        }
+
+        .controls {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        input[type="text"],
+        select {
+            padding: 10px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            transition: border-color 0.2s;
+        }
+
+        input[type="text"]:focus,
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            min-width: 250px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        thead {
+            background: #f7fafc;
+            position: sticky;
+            top: 0;
+        }
+
+        th {
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #2d3748;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #e2e8f0;
+            color: #4a5568;
+        }
+
+        tbody tr:hover {
+            background: #f7fafc;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .status-ongoing {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+
+        .status-ended {
+            background: #e2e8f0;
+            color: #2d3748;
+        }
+
+        .link-button {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .link-button:hover {
+            text-decoration: underline;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        @media (max-width: 768px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>CICERO Projects Dashboard</h1>
+            <p class="subtitle">Overview of Climate Research Projects</p>
+        </header>
+
+        <div class="metrics-grid" id="metrics">
+            <div class="loading">Loading data...</div>
+        </div>
+
+        <div class="charts-grid" id="charts">
+        </div>
+
+        <div class="table-container">
+            <h2 class="chart-title">Project Details</h2>
+            <div class="controls">
+                <input type="text" id="searchInput" placeholder="Search projects...">
+                <select id="statusFilter">
+                    <option value="">All Statuses</option>
+                    <option value="pågående">Pågående</option>
+                    <option value="ongoing">Ongoing</option>
+                    <option value="avsluttet">Avsluttet</option>
+                    <option value="ended">Ended</option>
+                </select>
+                <select id="groupFilter">
+                    <option value="">All Research Groups</option>
+                </select>
+            </div>
+            <table id="projectsTable">
+                <thead>
+                    <tr>
+                        <th>Project Name</th>
+                        <th>Status</th>
+                        <th>Start Date</th>
+                        <th>End Date</th>
+                        <th>Research Group (EN)</th>
+                        <th>Links</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let projectsData = [];
+        let charts = {};
+
+        // Load data
+        fetch('data/cicero_projects_data.json')
+            .then(response => response.json())
+            .then(data => {
+                projectsData = data;
+                initializeDashboard();
+            })
+            .catch(error => {
+                console.error('Error loading data:', error);
+                document.getElementById('metrics').innerHTML = '<div class="loading">Error loading data</div>';
+            });
+
+        function initializeDashboard() {
+            renderMetrics();
+            renderCharts();
+            populateFilters();
+            renderTable(projectsData);
+            setupEventListeners();
+        }
+
+        function renderMetrics() {
+            const totalProjects = projectsData.length;
+            const ongoingProjects = projectsData.filter(p =>
+                p.Status === 'pågående' || p.Status === 'ongoing'
+            ).length;
+            const completedProjects = projectsData.filter(p =>
+                p.Status === 'avsluttet' || p.Status === 'ended'
+            ).length;
+            const withBothLanguages = projectsData.filter(p =>
+                p['Has NO'] === 'YES' && p['Has EN'] === 'YES'
+            ).length;
+
+            const metricsHTML = `
+                <div class="metric-card">
+                    <div class="metric-value">${totalProjects}</div>
+                    <div class="metric-label">Total Projects</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">${ongoingProjects}</div>
+                    <div class="metric-label">Ongoing Projects</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">${completedProjects}</div>
+                    <div class="metric-label">Completed Projects</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">${withBothLanguages}</div>
+                    <div class="metric-label">Bilingual</div>
+                </div>
+            `;
+
+            document.getElementById('metrics').innerHTML = metricsHTML;
+        }
+
+        function renderCharts() {
+            const chartsContainer = document.getElementById('charts');
+
+            chartsContainer.innerHTML = `
+                <div class="chart-card">
+                    <h3 class="chart-title">Project Status Distribution</h3>
+                    <canvas id="statusChart"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3 class="chart-title">Research Groups (English)</h3>
+                    <canvas id="groupsChart"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3 class="chart-title">Projects by Year</h3>
+                    <canvas id="timelineChart"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3 class="chart-title">Match Type Distribution</h3>
+                    <canvas id="matchTypeChart"></canvas>
+                </div>
+            `;
+
+            renderStatusChart();
+            renderGroupsChart();
+            renderTimelineChart();
+            renderMatchTypeChart();
+        }
+
+        function renderStatusChart() {
+            const statusCounts = {};
+            projectsData.forEach(p => {
+                const status = p.Status || 'Unknown';
+                statusCounts[status] = (statusCounts[status] || 0) + 1;
+            });
+
+            const ctx = document.getElementById('statusChart').getContext('2d');
+            charts.status = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(statusCounts),
+                    datasets: [{
+                        data: Object.values(statusCounts),
+                        backgroundColor: [
+                            '#667eea',
+                            '#764ba2',
+                            '#f093fb',
+                            '#4facfe'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderGroupsChart() {
+            const groupCounts = {};
+            projectsData.forEach(p => {
+                const groups = p['Research Group (EN)'];
+                if (groups) {
+                    groups.split(', ').forEach(group => {
+                        groupCounts[group] = (groupCounts[group] || 0) + 1;
+                    });
+                }
+            });
+
+            const sortedGroups = Object.entries(groupCounts)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 10);
+
+            const ctx = document.getElementById('groupsChart').getContext('2d');
+            charts.groups = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: sortedGroups.map(g => g[0]),
+                    datasets: [{
+                        label: 'Number of Projects',
+                        data: sortedGroups.map(g => g[1]),
+                        backgroundColor: '#667eea'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderTimelineChart() {
+            const yearCounts = {};
+            projectsData.forEach(p => {
+                if (p['Start Date']) {
+                    const year = new Date(p['Start Date']).getFullYear();
+                    if (!isNaN(year)) {
+                        yearCounts[year] = (yearCounts[year] || 0) + 1;
+                    }
+                }
+            });
+
+            const sortedYears = Object.entries(yearCounts).sort((a, b) => a[0] - b[0]);
+
+            const ctx = document.getElementById('timelineChart').getContext('2d');
+            charts.timeline = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: sortedYears.map(y => y[0]),
+                    datasets: [{
+                        label: 'Projects Started',
+                        data: sortedYears.map(y => y[1]),
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderMatchTypeChart() {
+            const matchCounts = {};
+            projectsData.forEach(p => {
+                const match = p['Match Type'] || 'Unknown';
+                matchCounts[match] = (matchCounts[match] || 0) + 1;
+            });
+
+            const ctx = document.getElementById('matchTypeChart').getContext('2d');
+            charts.matchType = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(matchCounts),
+                    datasets: [{
+                        data: Object.values(matchCounts),
+                        backgroundColor: [
+                            '#667eea',
+                            '#764ba2',
+                            '#f093fb',
+                            '#4facfe',
+                            '#00f2fe',
+                            '#43e97b'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                boxWidth: 12,
+                                font: {
+                                    size: 10
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function populateFilters() {
+            const groups = new Set();
+            projectsData.forEach(p => {
+                if (p['Research Group (EN)']) {
+                    p['Research Group (EN)'].split(', ').forEach(g => groups.add(g));
+                }
+            });
+
+            const groupFilter = document.getElementById('groupFilter');
+            Array.from(groups).sort().forEach(group => {
+                const option = document.createElement('option');
+                option.value = group;
+                option.textContent = group;
+                groupFilter.appendChild(option);
+            });
+        }
+
+        function renderTable(data) {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+
+            data.forEach(project => {
+                const row = document.createElement('tr');
+
+                const statusClass = (project.Status === 'pågående' || project.Status === 'ongoing')
+                    ? 'status-ongoing'
+                    : 'status-ended';
+
+                row.innerHTML = `
+                    <td>${project['Project Name']}</td>
+                    <td><span class="status-badge ${statusClass}">${project.Status || 'N/A'}</span></td>
+                    <td>${project['Start Date'] || 'N/A'}</td>
+                    <td>${project['End Date'] || 'N/A'}</td>
+                    <td>${project['Research Group (EN)'] || 'N/A'}</td>
+                    <td>
+                        ${project['URL EN'] ? `<a href="${project['URL EN']}" class="link-button" target="_blank">EN</a>` : ''}
+                        ${project['URL NO'] ? `<a href="${project['URL NO']}" class="link-button" target="_blank">NO</a>` : ''}
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function filterProjects() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const statusFilter = document.getElementById('statusFilter').value;
+            const groupFilter = document.getElementById('groupFilter').value;
+
+            const filtered = projectsData.filter(project => {
+                const matchesSearch = project['Project Name'].toLowerCase().includes(searchTerm);
+                const matchesStatus = !statusFilter || project.Status === statusFilter;
+                const matchesGroup = !groupFilter ||
+                    (project['Research Group (EN)'] && project['Research Group (EN)'].includes(groupFilter));
+
+                return matchesSearch && matchesStatus && matchesGroup;
+            });
+
+            renderTable(filtered);
+        }
+
+        function setupEventListeners() {
+            document.getElementById('searchInput').addEventListener('input', filterProjects);
+            document.getElementById('statusFilter').addEventListener('change', filterProjects);
+            document.getElementById('groupFilter').addEventListener('change', filterProjects);
+        }
+    </script>
+</body>
+</html>
