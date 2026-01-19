@@ -236,12 +236,26 @@
                 <select id="groupFilter">
                     <option value="">All Research Groups</option>
                 </select>
+                <select id="languageFilter">
+                    <option value="">All Language Versions</option>
+                    <option value="both">Has Both (NO & EN)</option>
+                    <option value="en-only">Has English Only</option>
+                    <option value="no-only">Has Norwegian Only</option>
+                    <option value="missing-en">Missing English</option>
+                    <option value="missing-no">Missing Norwegian</option>
+                </select>
+                <select id="researchGroupConnectionFilter">
+                    <option value="">All Projects</option>
+                    <option value="has-group">Has Research Group</option>
+                    <option value="no-group">No Research Group</option>
+                </select>
             </div>
             <table id="projectsTable">
                 <thead>
                     <tr>
                         <th>Project Name</th>
                         <th>Status</th>
+                        <th>Languages</th>
                         <th>Start Date</th>
                         <th>End Date</th>
                         <th>Research Group (EN)</th>
@@ -537,9 +551,24 @@
                     ? 'status-ongoing'
                     : 'status-ended';
 
+                // Language availability badges
+                const hasEN = project['Has EN'] === 'YES';
+                const hasNO = project['Has NO'] === 'YES';
+                let languageBadges = '';
+                if (hasEN && hasNO) {
+                    languageBadges = '<span class="status-badge status-ongoing">NO</span> <span class="status-badge status-ongoing">EN</span>';
+                } else if (hasEN) {
+                    languageBadges = '<span class="status-badge status-ongoing">EN</span>';
+                } else if (hasNO) {
+                    languageBadges = '<span class="status-badge status-ongoing">NO</span>';
+                } else {
+                    languageBadges = '<span class="status-badge status-ended">None</span>';
+                }
+
                 row.innerHTML = `
                     <td>${project['Project Name']}</td>
                     <td><span class="status-badge ${statusClass}">${project.Status || 'N/A'}</span></td>
+                    <td>${languageBadges}</td>
                     <td>${project['Start Date'] || 'N/A'}</td>
                     <td>${project['End Date'] || 'N/A'}</td>
                     <td>${project['Research Group (EN)'] || 'N/A'}</td>
@@ -556,6 +585,8 @@
             const searchTerm = document.getElementById('searchInput').value.toLowerCase();
             const statusFilter = document.getElementById('statusFilter').value;
             const groupFilter = document.getElementById('groupFilter').value;
+            const languageFilter = document.getElementById('languageFilter').value;
+            const researchGroupConnectionFilter = document.getElementById('researchGroupConnectionFilter').value;
 
             const filtered = projectsData.filter(project => {
                 const matchesSearch = project['Project Name'].toLowerCase().includes(searchTerm);
@@ -563,7 +594,46 @@
                 const matchesGroup = !groupFilter ||
                     (project['Research Group (EN)'] && project['Research Group (EN)'].includes(groupFilter));
 
-                return matchesSearch && matchesStatus && matchesGroup;
+                // Language filter
+                let matchesLanguage = true;
+                if (languageFilter) {
+                    const hasEN = project['Has EN'] === 'YES';
+                    const hasNO = project['Has NO'] === 'YES';
+
+                    switch(languageFilter) {
+                        case 'both':
+                            matchesLanguage = hasEN && hasNO;
+                            break;
+                        case 'en-only':
+                            matchesLanguage = hasEN && !hasNO;
+                            break;
+                        case 'no-only':
+                            matchesLanguage = !hasEN && hasNO;
+                            break;
+                        case 'missing-en':
+                            matchesLanguage = !hasEN;
+                            break;
+                        case 'missing-no':
+                            matchesLanguage = !hasNO;
+                            break;
+                    }
+                }
+
+                // Research Group Connection filter
+                let matchesResearchGroup = true;
+                if (researchGroupConnectionFilter) {
+                    const hasGroupEN = project['Research Group (EN)'] && project['Research Group (EN)'].trim() !== '';
+                    const hasGroupNO = project['Research Group (NO)'] && project['Research Group (NO)'].trim() !== '';
+                    const hasAnyGroup = hasGroupEN || hasGroupNO;
+
+                    if (researchGroupConnectionFilter === 'has-group') {
+                        matchesResearchGroup = hasAnyGroup;
+                    } else if (researchGroupConnectionFilter === 'no-group') {
+                        matchesResearchGroup = !hasAnyGroup;
+                    }
+                }
+
+                return matchesSearch && matchesStatus && matchesGroup && matchesLanguage && matchesResearchGroup;
             });
 
             renderTable(filtered);
@@ -573,6 +643,8 @@
             document.getElementById('searchInput').addEventListener('input', filterProjects);
             document.getElementById('statusFilter').addEventListener('change', filterProjects);
             document.getElementById('groupFilter').addEventListener('change', filterProjects);
+            document.getElementById('languageFilter').addEventListener('change', filterProjects);
+            document.getElementById('researchGroupConnectionFilter').addEventListener('change', filterProjects);
         }
     </script>
 </body>
